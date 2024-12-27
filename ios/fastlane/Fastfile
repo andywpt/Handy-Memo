@@ -1,110 +1,175 @@
 opt_out_usage
+skip_docs
 default_platform(:ios)
 
-platform :ios do
-  desc "Load App Store Connect API token"
-  private_lane :create_api_token do |options|
-    # UI.message("The value of my_variable is: #{options[:key_id]}")
-    app_store_connect_api_key(
-      key_id: options[:key_id],
-      issuer_id: options[:issuer_id],
-      key_filepath: options[:key_filepath]
+lane :beta do
+  begin
+    decrypt_files(
+      input_dir: "Encrypted",
+      output_dir: "Private",
+      passphrase_path: "Private/passphrase"
     )
-  end
-  
-  desc "Install certificate in keychain"
-  private_lane :install_certificate do |options|
-    keychain_name = "signing"
-    keychain_password = ""
-    certificate_path = options[:certificate]
-  
-    delete_keychain(
-      name: keychain_name
-    ) if File.exist? File.expand_path("~/Library/Keychains/#{keychain_name}-db")
-
-    create_keychain(
-      name: keychain_name,
-      password: keychain_password,
-      default_keychain: true,
-      unlock: true,
-      timeout: 0,
-      require_create: true
+    load_env_variables(
+      files: ["Private/.appstore.env"]
     )
-
-    import_certificate(
-      certificate_path: certificate_path,
-      keychain_name: keychain_name,
-      keychain_password: keychain_password,
-      log_output: true
-    )
-  end
- 
-  desc "Configure code signing settings in Xcode"
-  lane :configure_signing_settings do |options|
-    sigh(app_identifier: options[:bundle_id])
-    update_code_signing_settings(
-      targets: [options[:target]],
-      code_sign_identity: "iPhone Distribution",
-      #team_id: ENV['DEVELOPMENT_TEAM'],
-      profile_uuid: lane_context[SharedValues::SIGH_UUID] 
-    )
-  end
- 
-  desc "Increment app build number"
-  private_lane :update_app_build_number do |options|
-    current_version = get_version_number(target: options[:target])
-    latest_build_number = latest_testflight_build_number(version: current_version)
-    increment_build_number(build_number: (latest_build_number + 1))
-  end
-
-  desc "Update Info.plist"
-  private_lane :configure_info_plist do |options|
-    plist_path = options[:info_plist_path]
-    updates = options[:config]
-    update_info_plist(
-      plist_path: plist_path,
-      block: proc do |plist|
-        updates.each do |key, value|
-          plist["#{key}"] = value
-        end
-      end
-    )
-  end
-
-  desc "Archive app"
-  private_lane :archive_app do |options|
-    gym(
-      workspace: options[:workspace],
-      scheme: options[:scheme],
-      export_method: "app-store",
-      export_options: {
-        testFlightInternalTestingOnly: true
-      },
-    )
-  end
-
-  lane :upload do
     create_api_token(
       key_id: ENV["APPSTORE_API_KEY_ID"],
       issuer_id: ENV["APPSTORE_API_ISSUER_ID"],
-      key_filepath: ENV["APPSTORE_API_KEY_PATH"],
+      key_filepath: "fastlane/Private/AppStore-API-Key.p8"
     )
-    install_certificate(certificate: ENV["DISTRIBUTION_CERTIFICATE"])
+    install_certificate(
+      certificate_path: "fastlane/Private/AppStore-Distribution-Certificate.p12"
+    )
     configure_signing_settings(
-      bundle_id: ENV['IOS_PRODUCTION_BUNDLE_ID'],
-      target: ENV['IOS_TARGET_NAME'],
+      bundle_id: "com.handymemo.ios",
+      target: "Runner",
+      team_id: "ZKX4347K9W"
     )
-    update_app_build_number(target: ENV['IOS_TARGET'])
-    archive_app(
-      workspace: ENV['WORKSPACE'],
-      scheme: ENV['SCHEME']
+    update_app_build_number(
+      bundle_id: "com.handymemo.ios",
+      target: "Runner"
     )
+    archive(
+      workspace: "Runner.xcworkspace",
+      scheme: "Runner"
+    )
+    testflight
+  ensure
+    clean_up
   end
- 
-  lane :beta do
-    # 平台版(Apple Store版) 正式區
-    # Bundle Id為 com.fiami.luckytalk
-    prod_config = {
+end
+
+private_lane :decrypt_files do |options|
+  input_dir = options[:input_dir]
+  output_dir = options[:output_dir]
+  passphrase_path = options[:passphrase_path]
+  sh "chmod +x Scripts/decrypt_files.sh"
+  sh "Scripts/decrypt_files.sh #{passphrase_path} #{input_dir} #{output_dir}"
+end
+
+private_lane :load_env_variables do |options|
+  require "dotenv"
+  env_files = options[:files]
+  env_files.each do |file|
+    Dotenv.load(file)
+  end
+end
+
+desc "Load App Store Connect API token"
+private_lane :create_api_token do |options|
+  app_store_connect_api_key(
+    key_id: options[:key_id],
+    issuer_id: options[:issuer_id],
+    key_filepath: options[:key_filepath]
+  )
+end
+
+desc "Import certificate to a temporary keychain"
+private_lane :install_certificate do |options|
+  keychain_name = "fastlane"
+  keychain_password = ""
+  certificate_path = options[:certificate_path]
+
+  delete_keychain(
+    name: keychain_name
+  ) if File.exist? File.expand_path("~/Library/Keychains/#{keychain_name}-db")
+
+  create_keychain(
+    name: keychain_name,
+    password: keychain_password,
+    unlock: true,
+    timeout: 0,
+    require_create: true
+  )
+
+  import_certificate(
+    certificate_path: certificate_path,
+    keychain_name: keychain_name,
+    keychain_password: keychain_password,
+    log_output: true
+  )
+end
+
+desc "Configure code signing settings in Xcode"
+lane :configure_signing_settings do |options|
+  sigh(app_identifier: options[:bundle_id])
+  update_code_signing_settings(
+    targets: [options[:target]],
+    code_sign_identity: "iPhone Distribution",
+    team_id: options[:team_id],
+    profile_uuid: lane_context[SharedValues::SIGH_UUID] 
+  )
+end
+
+desc "Update Info.plist"
+private_lane :configure_info_plist do |options|
+  plist_path = options[:info_plist_path]
+  updates = options[:config]
+  update_info_plist(
+    plist_path: plist_path,
+    block: proc do |plist|
+      updates.each do |key, value|
+        plist["#{key}"] = value
+      end
+    end
+  )
+end
+
+desc "Increment app build number"
+private_lane :update_app_build_number do |options|
+  current_version = get_version_number(target: options[:target])
+  latest_build_number = latest_testflight_build_number(
+    version: current_version,
+    app_identifier: options[:bundle_id],
+  )
+  increment_build_number(build_number: (latest_build_number + 1))
+end
+
+private_lane :archive do |options|
+  gym(
+    workspace: options[:workspace],
+    scheme: options[:scheme],
+    export_method: "app-store",
+    export_options: {
+      testFlightInternalTestingOnly: true
+    },
+  )
+end
+
+desc "Clean up"
+private_lane :clean_up do |options|
+  keychain_name = "fastlane"
+  delete_keychain(
+    name: keychain_name
+  ) if File.exist? File.expand_path("~/Library/Keychains/#{keychain_name}-db")
+end
+
+lane :beta_prod do
+  # 平台版(Apple Store版) 正式區
+  decrypt_files(
+    input_dir: "Encrypted",
+    output_dir: "Private",
+    passphrase_path: "Private/passphrase"
+  )
+  load_env_variables(
+    files: ["Private/.appstore.env"]
+  )
+  create_api_token(
+    key_id: ENV["APPSTORE_API_KEY_ID"],
+    issuer_id: ENV["APPSTORE_API_ISSUER_ID"],
+    key_filepath: "fastlane/Private/AppStore-API-Key.p8",
+  )
+  install_certificate(
+    certificate_path: "fastlane/Private/AppStore-Distribution-Certificate.p12"
+  )
+  configure_signing_settings(
+    bundle_id: "com.fiami.luckytalk",
+    target: "Runner",
+    team_id: "???"
+  )
+  configure_info_plist(
+    info_plist_path: "Runner/Info.plist",
+    config: {
       "CFBundleDisplayName" => "吉聊",
       "microChatAgentUid" => "store",
       "luckyTalkDomains" => [
@@ -115,16 +180,45 @@ platform :ios do
         "platform5.fiamidemo.net"
       ]
     }
-    configure_info_plist(
-      info_plist_path: ENV["INFO_PLIST_PATH"],
-      config: prod_config
-    )
-  end
+  )
+  update_app_build_number(
+    bundle_id: "com.fiami.luckytalk",
+    target: "Runner"
+  )
+  archive(
+    workspace: "Runner.xcworkspace",
+    scheme: "Runner"
+  )
+  testflight
+  clean_up
+end
 
-  lane :alpha do
-    # 代理版(ipa版) 測試區
-    # Bundle Id為 com.fiami.luckytalk.agent
-    agent_config = {
+lane :beta_agent do
+  # 代理版(ipa版) 測試區
+  decrypt_files(
+    input_dir: "Encrypted",
+    output_dir: "Private",
+    passphrase_path: "Private/passphrase"
+  )
+  load_env_variables(
+    files: ["Private/.appstore.env"]
+  )
+  create_api_token(
+    key_id: ENV["APPSTORE_API_KEY_ID"],
+    issuer_id: ENV["APPSTORE_API_ISSUER_ID"],
+    key_filepath: "fastlane/Private/AppStore-API-Key.p8",
+  )
+  install_certificate(
+    certificate_path: "fastlane/Private/AppStore-Distribution-Certificate.p12"
+  )
+  configure_signing_settings(
+    bundle_id: "com.fiami.luckytalk.agent",
+    target: "Runner",
+    team_id: "???"
+  )
+  configure_info_plist(
+    info_plist_path: "Runner/Info.plist",
+    config: {
       "CFBundleDisplayName" => "代理吉聊",
       "microChatAgentUid" => "654cad2b-87ee-43d5-8e5b-6d2db11e2844",
       "luckyTalkDomains" => [
@@ -132,5 +226,15 @@ platform :ios do
         "test-2.mircotest.com",
       ]
     }
-  end
+  )
+  update_app_build_number(
+    bundle_id: "com.fiami.luckytalk.agent",
+    target: "Runner"
+  )
+  archive(
+    workspace: "Runner.xcworkspace",
+    scheme: "Runner"
+  )
+  testflight
+  clean_up
 end

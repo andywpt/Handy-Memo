@@ -34,7 +34,6 @@ fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
 fastlane/Private/
-fastlane/passphrase
 
 # App packaging
 *.ipa

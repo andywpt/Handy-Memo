@@ -1,0 +1,25 @@
+# build-job:
+#   stage: build
+#   script:
+#     - echo "Hello, $GITLAB_USER_LOGIN!"
+
+# 'v[0-9]+.[0-9]+.[0-9]+-beta.[0-9]+'
+# v0.1.0-beta.1
+on_merge_request:
+  stage: deploy
+  tags:
+    - macos-andy
+  script:
+    - export PATH="/opt/homebrew/bin:$PATH"
+    - export PATH=$HOME/flutter/bin:$PATH
+    - export LC_ALL=en_US.UTF-8
+    - export LANG=en_US.UTF-8
+    - cd ios/fastlane
+    - mkdir Private
+    - echo "$PASSPHRASE" > Private/passphrase
+    - flutter pub get
+    - fastlane beta
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+      when: always 
+    - when: manual
