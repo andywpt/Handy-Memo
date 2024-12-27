@@ -1,0 +1,2 @@
+app_identifier ENV["IOS_PRODUCTION_BUNDLE_ID"] # Bundle Identifier
+team_id ENV["DEVELOPMENT_TEAM_ID"] # Apple Developer Team ID
