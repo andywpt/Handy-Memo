@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -9,6 +10,13 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(home: Scaffold(body: Center(child: Text('🏆🏆'))));
+    return MaterialApp(
+      home: Scaffold(
+        body: Container(
+          color: CupertinoColors.systemYellow,
+          child: Center(child: Text('✅', style: TextStyle(fontSize: 40))),
+        ),
+      ),
+    );
   }
 }
