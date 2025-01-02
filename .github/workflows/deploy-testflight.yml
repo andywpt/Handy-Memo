@@ -1,0 +1,39 @@
+name: Upload To TestFlight
+
+on:
+  workflow_dispatch:
+
+jobs:
+  upload_to_testflight:
+    name: Upload To TestFlight
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up ruby environment
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.3.3
+          bundler-cache: true
+      
+      - name: Install Dependencies
+        run: |
+          brew install fvm
+          fvm install
+          fvm flutter pub get
+
+      - name: Load passphrase from secrets
+        env:
+          PASSPHRASE: ${{ secrets.PASSPHRASE }}
+        run: |
+          cd ios/fastlane
+          bundle install --quiet
+          mkdir Private
+          echo "$PASSPHRASE" > Private/passphrase
+         
+      - name: Archive and Upload
+        run: |
+          pwd
+          cd ios/fastlane
+          bundle exec fastlane beta
