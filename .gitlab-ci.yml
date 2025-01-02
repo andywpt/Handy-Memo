@@ -5,9 +5,9 @@ upload_to_testflight:
     - fvm install
     - fvm flutter pub get
     - cd ios/fastlane
+    - bundle install --quiet
     - mkdir Private
     - echo "$PASSPHRASE" > Private/passphrase
-    - bundle install --quiet
     - bundle exec fastlane beta
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
@@ -39,9 +39,9 @@ upload_agent_to_testflight:
     - fvm exec dart pub global activate melos
     - fvm exec melos bootstrap --scope app --scope common
     - cd ios/fastlane
+    - bundle install --quiet
     - mkdir Private
     - echo "$PASSPHRASE" > Private/passphrase
-    - bundle install --quiet
     - bundle exec fastlane beta_agent
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
