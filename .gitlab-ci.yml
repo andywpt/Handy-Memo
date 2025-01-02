@@ -1,19 +1,48 @@
-# 'v[0-9]+.[0-9]+.[0-9]+-beta.[0-9]+'
-# v0.1.0-beta.1
-on_merge_request:
+upload_to_testflight:
   stage: deploy
-  tags:
-    - macos-andy
+  tags: [macos-andy]
   script:
-    - export PATH="/opt/homebrew/bin:$PATH"
-    - export PATH=$HOME/flutter/bin:$PATH
-    - export LC_ALL=en_US.UTF-8
-    - export LANG=en_US.UTF-8
+    - fvm install
+    - fvm flutter pub get
     - cd ios/fastlane
     - mkdir Private
     - echo "$PASSPHRASE" > Private/passphrase
-    - flutter pub get
-    - fastlane beta
+    - bundle install --quiet
+    - bundle exec fastlane beta
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+      when: always 
+    - when: manual
+
+upload_prod_to_testflight:
+  stage: deploy
+  tags: [macos-andy]
+  script:
+    - fvm install
+    - fvm exec dart pub global activate melos
+    - fvm exec melos bootstrap --scope app --scope common
+    - cd ios/fastlane
+    - mkdir Private
+    - echo "$PASSPHRASE" > Private/passphrase
+    - bundle install --quiet
+    - bundle exec fastlane beta_prod
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
+      when: always 
+    - when: manual
+
+upload_agent_to_testflight:
+  stage: deploy
+  tags: [macos-andy]
+  script:
+    - fvm install
+    - fvm exec dart pub global activate melos
+    - fvm exec melos bootstrap --scope app --scope common
+    - cd ios/fastlane
+    - mkdir Private
+    - echo "$PASSPHRASE" > Private/passphrase
+    - bundle install --quiet
+    - bundle exec fastlane beta_agent
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"
       when: always 

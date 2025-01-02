@@ -29,6 +29,7 @@ lane :beta do
       bundle_id: "com.handymemo.ios",
       target: "Runner"
     )
+    cocoapods
     archive(
       workspace: "Runner.xcworkspace",
       scheme: "Runner"
@@ -165,7 +166,7 @@ lane :beta_prod do
   configure_signing_settings(
     bundle_id: "com.fiami.luckytalk",
     target: "Runner",
-    team_id: "???"
+    team_id: "84TA2JNACN"
   )
   configure_info_plist(
     info_plist_path: "Runner/Info.plist",
@@ -214,7 +215,7 @@ lane :beta_agent do
   configure_signing_settings(
     bundle_id: "com.fiami.luckytalk.agent",
     target: "Runner",
-    team_id: "???"
+    team_id: "84TA2JNACN"
   )
   configure_info_plist(
     info_plist_path: "Runner/Info.plist",
@@ -237,4 +238,9 @@ lane :beta_agent do
   )
   testflight
   clean_up
+end
+
+lane :dd do |options|
+  sh "chmod +x Scripts/build_info.sh"
+  sh "Scripts/build_info.sh"
 end

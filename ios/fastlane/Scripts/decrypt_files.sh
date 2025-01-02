@@ -1,6 +1,6 @@
 #!/bin/bash
 
-[ "$#" -eq 3 ] || { echo "Usage: $0 <passphrase> <encrypted_files_dir> <decrypted_files_dir>"; exit 1; }
+[ "$#" -eq 3 ] || { echo "Usage: $0 <passphrase_path> <encrypted_files_dir> <decrypted_files_dir>"; exit 1; }
 
 PASSPHRASE="$1"
 ENCRYPTED_DIR="$2"
