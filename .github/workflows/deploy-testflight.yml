@@ -37,4 +37,5 @@ jobs:
         run: |
           pwd
           cd ios/fastlane
+          fvm flutter precache --ios
           bundle exec fastlane beta
