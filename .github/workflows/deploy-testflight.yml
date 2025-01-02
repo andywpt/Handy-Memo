@@ -19,6 +19,7 @@ jobs:
       
       - name: Install Dependencies
         run: |
+          brew tap leoafarias/fvm
           brew install fvm
           fvm install
           fvm flutter pub get
