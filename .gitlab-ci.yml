@@ -4,8 +4,10 @@ upload_to_testflight:
   script:
     - fvm install
     - fvm flutter pub get
+    - fvm flutter precache --ios
     - cd ios/fastlane
     - bundle install --quiet
+    - bundle exec pod install
     - mkdir Private
     - echo "$PASSPHRASE" > Private/passphrase
     - bundle exec fastlane beta

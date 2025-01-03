@@ -23,6 +23,7 @@ jobs:
           brew install fvm
           fvm install
           fvm flutter pub get
+          fvm flutter precache --ios
 
       - name: Load passphrase from secrets
         env:
@@ -30,6 +31,7 @@ jobs:
         run: |
           cd ios/fastlane
           bundle install --quiet
+          bundle exec pod install
           mkdir Private
           echo "$PASSPHRASE" > Private/passphrase
          
@@ -37,5 +39,4 @@ jobs:
         run: |
           pwd
           cd ios/fastlane
-          fvm flutter precache --ios
           bundle exec fastlane beta

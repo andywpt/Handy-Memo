@@ -29,7 +29,6 @@ lane :beta do
       bundle_id: "com.handymemo.ios",
       target: "Runner"
     )
-    cocoapods
     archive(
       workspace: "Runner.xcworkspace",
       scheme: "Runner"
